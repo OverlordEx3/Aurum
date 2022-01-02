@@ -3,7 +3,7 @@ using HtmlAgilityPack;
 
 namespace Aurum.Core;
 
-public class TokenReplacer : ITokenReplacer
+public class HtmlTokenReplacer : ITokenReplacer
 {
     public void ReplaceTokens(Stream input, Stream output, Dictionary<string, string> tokenValues)
     {
@@ -18,22 +18,25 @@ public class TokenReplacer : ITokenReplacer
 
         ValidateDocument(document);
 
-        var descendantNodes = document.DocumentNode.SelectNodes(BuildXPathExpression(tokenValues.Keys.ToArray()));
-        foreach (var node in descendantNodes.ToList())
+        if (tokenValues.Any())
         {
-            var textNode = (HtmlTextNode)node;
-            var text = System.Web.HttpUtility.HtmlDecode(textNode.Text);
-            var (key, value) = tokenValues.First(pair => text.Contains(pair.Key));
-            textNode.Text = text.Replace(key, value);
+            var descendantNodes = document.DocumentNode.SelectNodes(BuildXPathExpression(tokenValues.Keys.ToArray()));
+            foreach (var node in descendantNodes.ToList())
+            {
+                var textNode = (HtmlTextNode)node;
+                var text = System.Web.HttpUtility.HtmlDecode(textNode.Text);
+                var (key, value) = tokenValues.First(pair => text.Contains(pair.Key));
+                textNode.Text = text.Replace(key, value);
+            }
         }
 
         output.Seek(0L, SeekOrigin.Begin);
         document.Save(output);
+        output.Seek(0L, SeekOrigin.Begin);
     }
 
     private static string BuildXPathExpression(IReadOnlyList<string> tokens)
     {
-
         var sb = new StringBuilder();
         sb.Append("//text()[contains(.,");
         for (var i = 0; i < tokens.Count; i++)
